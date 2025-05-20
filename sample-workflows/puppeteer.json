@@ -1,0 +1,98 @@
+{
+  "name": "Puppeteer Sample Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1f05f810-2c39-4323-a5bd-c3fd7756c517",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "screenshot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ac680a5c-cf2e-4346-95eb-896ffe9f65b7",
+      "name": "Show Screenshot"
+    },
+    {
+      "parameters": {
+        "jsCode": "const puppeteer = require('puppeteer-core');\n\ntry {\n  // Log the start of the script\n  console.log(\"🚀 Starting Puppeteer script...\");\n\n  // Launch the browser\n  console.log(\"🌀 Launching browser...\");\n  const browser = await puppeteer.launch({\n    headless: 'new',  // Headless mode for efficiency\n    executablePath: '/usr/bin/chromium', // Path to Chromium executable\n    args: ['--no-sandbox', '--disable-setuid-sandbox'], // Security flags for Docker environments\n  });\n  console.log(\"✅ Browser launched successfully.\");\n\n  // Create a new page instance\n  console.log(\"🌐 Opening a new page...\");\n  const page = await browser.newPage();\n  console.log(\"✅ New page opened.\");\n\n  // Navigate to the target URL and wait until the DOM content is loaded\n  const url = 'https://www.example.com';\n  console.log(`🌍 Navigating to: ${url}`);\n  await page.goto(url, { waitUntil: 'domcontentloaded' });\n  console.log(\"✅ Page loaded successfully.\");\n\n  // Take a screenshot of the loaded page\n  console.log(\"📸 Capturing screenshot...\");\n  const screenshot = await page.screenshot({ encoding: 'base64' });\n  console.log(\"✅ Screenshot captured.\");\n\n  // Get the full HTML content of the page\n  console.log(\"📝 Extracting page content...\");\n  const pageContent = await page.content();\n  console.log(\"✅ Page content extracted.\");\n\n  // Close the browser\n  console.log(\"❌ Closing browser...\");\n  await browser.close();\n  console.log(\"✅ Browser closed.\");\n\n  // Return success response with screenshot and page content\n  return [{\n    json: {\n      success: true,\n      screenshot: screenshot,\n      content: pageContent,\n    }\n  }];\n} catch (error) {\n  // Log and return error response\n  console.error(\"🔥 An error occurred:\", error.message);\n  console.error(\"📝 Stack trace:\", error.stack);\n\n  // Return error response in the proper n8n format\n  return [{\n    json: {\n      success: false,\n      error: error.message || 'Unknown error',\n      stack: error.stack || 'No stack trace available',\n    }\n  }];\n}"
+      },
+      "id": "1c5ea07b-32f5-4ed0-87d4-8d7d6b11cdac",
+      "name": "Get Web Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cheerio = require('cheerio');\n\ntry {\n  const html = $input.first().json.content;\n\n  // Load HTML into Cheerio\n  const $ = cheerio.load(html);\n\n  // Extract data\n  const title = $('title').text();\n  const metaCharset = $('meta[charset]').attr('charset');\n  const metaViewport = $('meta[name=\"viewport\"]').attr('content');\n  const bodyText = $('body').text().trim().replace(/\\s+/g, ' '); // Remove extra whitespace\n\n  return [{\n    json: {\n      success: true,\n      title,\n      meta: {\n        charset: metaCharset,\n        viewport: metaViewport\n      },\n      bodyText\n    }\n  }];\n} catch (error) {\n  return [{\n    json: {\n      success: false,\n      error: error.message || 'Unknown error',\n      stack: error.stack || 'No stack trace available'\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "e4620d7f-246d-47bb-bedb-3271fcca2a88",
+      "name": "Parse Web Content"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Web Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Web Content": {
+      "main": [
+        [
+          {
+            "node": "Show Screenshot",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Parse Web Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "de78bff6-3ade-4322-92f3-80847f73fb5b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8e35ffb5d42567f58a7868eb73fae3d3f3ce4c4ac07ce28d27e8b3d30f4674ce"
+  },
+  "id": "9phh6yRCyyEwWbPS",
+  "tags": []
+}
